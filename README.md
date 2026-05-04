@@ -288,7 +288,7 @@ nano /etc/ssh_banner
 Authorized access only
 ```
 ```bash
-sudo systemctl restart sshd
+systemctl restart sshd
 ```
 ```bash
 useradd -u 2026 -m -s /bin/bash sshuser
@@ -436,7 +436,7 @@ nano /etc/ssh_banner
 Authorized access only
 ```
 ```bash
-sudo systemctl restart sshd
+systemctl restart sshd
 ```
 ```bash
 useradd -u 2026 -m -s /bin/bash sshuser

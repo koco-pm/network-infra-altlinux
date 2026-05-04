@@ -409,7 +409,7 @@ nmtui
 ```
 - **hostname** - br-srv.au-team.irpo
 - **ens18** – 192.168.30.2/28
-  + **gateway** - 192.168.10.1
+  + **gateway** - 192.168.30.1
   + **DNS** - 77.88.8.8
 ```bash
 exec bash

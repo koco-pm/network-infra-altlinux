@@ -95,7 +95,7 @@ staticd=yes
 ospfd=yes
 ```
 >Пример файла конфигурации можно скачать с http-сервера:  
->wget http://88.201.141.149/br-rtr/frr.conf
+>wget http://88.201.141.149/hq-rtr/frr.conf
 
 ```bash
 nano /etc/frr/frr.conf

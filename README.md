@@ -1,5 +1,8 @@
 # Настройка сетевой инфраструктуры на примере Alt Linux 10.1
 
+## Полезная информация:
+**Аналогичная статья от Faiks:** - https://cop.faiks.space/demoekz/
+
 **Примерная схема сети:**  
 <img width="646" height="732" alt="ДемоСхема2" src="https://github.com/user-attachments/assets/6dae16cb-ff6c-4f01-8e4d-aa742df363df" />  
   
@@ -22,8 +25,8 @@ nmtui
 ```
 - **hostname** - isp
 - **ens18** – dhcp
-- **ens19** – 172.16.1.1/28
-- **ens20** – 172.16.2.1/28
+- **ens19** – 172.16.1.1/28 (Задать согласно заданию)
+- **ens20** – 172.16.2.1/28 (Задать согласно заданию)
 
 ```bash
 exec bash
@@ -44,6 +47,10 @@ iptables -t nat -A POSTROUTING -o ens18 -j MASQUERADE
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
 ```
+Настройка часового пояса:
+```bash
+timedatectl set-timezone 'Europe/Moscow'
+```
 
 ## HQ-RTR
 Настройка интерфейсов через `nmtui`:
@@ -51,13 +58,13 @@ systemctl enable --now iptables
 nmtui
 ```
 - **hostname** - hq-rtr.au-team.irpo
-- **ens18** – 172.16.1.2/28
-  + **gateway** - 172.16.1.1
-  + **DNS** - 77.88.8.8
+- **ens18** – 172.16.1.2/28 (Задать согласно заданию)
+  + **gateway** - 172.16.1.1 (Задать согласно заданию)
+  + **DNS** - 77.88.8.8 (После изменить на ipv4 HQ-SRV)
 - **ens19** – x
-  + **ens19.100** - 192.168.10.1/27
-  + **ens19.200** - 192.168.20.1/28
-  + **ens19.999** - 192.168.99.1/29
+  + **ens19.100** - 192.168.10.1/27 (Задать согласно заданию)
+  + **ens19.200** - 192.168.20.1/28 (Задать согласно заданию)
+  + **ens19.999** - 192.168.99.1/29 (Задать согласно заданию)
 
 ```bash
 exec bash
@@ -88,7 +95,7 @@ nano /etc/rc.d/rc.local
 ```
 ```bash
 #!/bin/bash
-ip tunnel add tun1 mode gre remote 172.16.2.2 local 172.16.1.2 ttl 255 key 12345678
+ip tunnel add tun1 mode gre remote 172.16.2.2 local 172.16.1.2 ttl 255 key 12345678 #Адреса согласно заданию
 ip link set tun1 up
 ip addr add 192.168.111.1/30 dev tun1
 ```
@@ -118,10 +125,10 @@ nano /etc/frr/frr.conf
 ```bash
 ip forwarding
 router ospf
- network 192.168.10.0/27 area 0
- network 192.168.20.0/28 area 0
- network 192.168.99.0/29 area 0
- network 192.168.111.0/30 area 0
+ network 192.168.10.0/27 area 0 #Vlan100 (Адрес согласно заданию)
+ network 192.168.20.0/28 area 0 #Vlan202 (Адрес согласно заданию)
+ network 192.168.99.0/29 area 0 #Vlan999 (Адрес согласно заданию)
+ network 192.168.111.0/30 area 0 #Сеть туннеля
 interface tun1
  ip ospf authentication message-digest
  ip ospf message-digest-key 1 md5 12345678
@@ -142,17 +149,17 @@ nano /etc/dhcp/dhcpd.conf
 ```
 ```bash
 ddns-update-style none;
-subnet 192.168.20.0 netmask 255.255.255.240 {
-  option routers 192.168.20.1;
-  option subnet-mask 255.255.255.240;
-  option domain-name "au-team.irpo";
-  option domain-name-servers 192.168.10.2;
-  range 192.168.20.2 192.168.20.10;
-  default-lease-time 21600;
-  max-lease-time 43200;
+subnet 192.168.20.0 netmask 255.255.255.240 {       #Сеть и маска согласно заданию
+  option routers 192.168.20.1;                      #Шлюз по умолчанию для клиента (инт. HQ-RTR), согласно заданию
+  option subnet-mask 255.255.255.240;               #Маска для клиента (оставляем аналогичной вышеуказанной)
+  option domain-name "au-team.irpo";                #Поисковый домен для клиента
+  option domain-name-servers 192.168.10.2;          #DNS-сервер для клиента (HQ-SRV), согласно заданию
+  range 192.168.20.2 192.168.20.10;                 #Пул адресов, согласно заданию
+  default-lease-time 21600;                         #Не меняется
+  max-lease-time 43200;                             #Не меняется
   host HQ-CLI {
-    hardware ethernet <MAC-адрес вида 11:22:33...>;
-    fixed-address 192.168.20.2;
+    hardware ethernet <MAC-адрес вида 11:22:33...>; #MAC-адрес клиента
+    fixed-address 192.168.20.2;                     #Фиксированный адрес, согласно заданию
   }
 }
 ```
@@ -160,7 +167,7 @@ subnet 192.168.20.0 netmask 255.255.255.240 {
 nano /etc/sysconfig/dhcpd
 ```
 ```bash
-DHCPDARGS=ens19.200
+DHCPDARGS=ens19.200  #Vlan к HQ-CLI
 ```
 ```bash
 systemctl restart dhcpd
@@ -179,15 +186,20 @@ nano /etc/sudoers
 net_admin ALL=(ALL) NOPASSWD:ALL
 ```
 
+Настройка часового пояса:
+```bash
+timedatectl set-timezone 'Europe/Moscow'
+```
+
 ## HQ-SRV
 Настройка интерфейсов через `nmtui`:
 ```bash
 nmtui
 ```
 - **hostname** - hq-srv.au-team.irpo
-- **ens18** – 192.168.10.2/27
-  + **gateway** - 192.168.10.1
-  + **DNS** - 77.88.8.8
+- **ens18** – 192.168.10.2/27 (Задать согласно заданию)
+  + **gateway** - 192.168.10.1 (Задать согласно заданию, инт. HQ-RTR)
+  + **DNS** - 77.88.8.8 (Позже изменить на ipv4 HQ-SRV, согласно заданию)
 ```bash
 exec bash
 systemctl restart NetworkManager
@@ -225,13 +237,13 @@ zone "au-team.irpo" {
   type master;
   file "/etc/bind/zone/au-team.irpo";
 };
-zone "10.168.192.in-addr.arpa" {
+zone "10.168.192.in-addr.arpa" {          #Сеть HQ-SRV, задать согласно заданию
   type master;
-  file "/etc/bind/zone/db.192.168.10";
+  file "/etc/bind/zone/db.192.168.10";    #Сеть HQ-SRV, задать согласно заданию
 };
-zone "20.168.192.in-addr.arpa" {
+zone "20.168.192.in-addr.arpa" {          #Сеть HQ-CLI, задать согласно заданию
   type master;
-  file "/etc/bind/zone/db.192.168.20";
+  file "/etc/bind/zone/db.192.168.20";    #Сеть HQ-CLI, задать согласно заданию
 };
 ```
 >Пример файла конфигурации можно скачать с http-сервера:  
@@ -248,19 +260,19 @@ $TTL 86400
         604800      ; Expire
         86400 )     ; Minimum TTL
 @       IN NS   ns.au-team.irpo.
-ns      IN A    192.168.10.2
-hq-rtr  IN A    192.168.10.1
-br-rtr  IN A    172.16.2.2
-hq-srv  IN A    192.168.10.2
-hq-cli  IN A    192.168.20.2
-br-srv  IN A    192.168.30.2
-docker  IN A    172.16.1.1
-web     IN A    172.16.2.1
+ns      IN A    192.168.10.2        #Адрес HQ-SRV, согласно заданию
+hq-rtr  IN A    192.168.10.1        #Адрес инт. HQ-RTR в сторону HQ-SRV, согл. заданию
+br-rtr  IN A    172.16.2.2          #Адрес инт. BR-RTR в сторону ISP, согл. заданию
+hq-srv  IN A    192.168.10.2        #Адрес HQ-SRV, согласно заданию
+hq-cli  IN A    192.168.20.2        #Адрес HQ-CLI, согласно заданию
+br-srv  IN A    192.168.30.2        #Адрес BR-SRV, согласно заданию
+docker  IN A    172.16.1.1          #Адрес инт. ISP в сторону HQ-RTR, согл. заданию
+web     IN A    172.16.2.1          #Адрес инт. ISP в сторону BR-RTR, согл. заданию
 ```
 >Пример файла конфигурации можно скачать с http-сервера:  
 >wget http://88.201.141.149/db.192.168.20
 ```bash
-nano /etc/bind/zone/db.192.168.20
+nano /etc/bind/zone/db.192.168.20    #Сеть HQ-CLI, переимновать файл согл. заданию
 ```
 ```bash
 $TTL 86400
@@ -272,7 +284,7 @@ $TTL 86400
 >Пример файла конфигурации можно скачать с http-сервера:  
 >wget http://88.201.141.149/db.192.168.10
 ```bash
-nano /etc/bind/zone/db.192.168.10
+nano /etc/bind/zone/db.192.168.10    #Сеть HQ-SRV, переимновать файл согл. заданию
 ```
 ```bash
 $TTL 86400
@@ -282,7 +294,9 @@ $TTL 86400
 1 IN PTR hq-rtr.au-team.irpo.
 2 IN PTR hq-srv.au-team.irpo.
 ```
-
+```bash
+systemctl restart bind
+```
 SSH-сервер:
 ```bash
 systemctl enable --now sshd
@@ -316,6 +330,10 @@ nano /etc/sudoers
 ```bash
 sshuser ALL=(ALL) NOPASSWD:ALL
 ```
+Настройка часового пояса:
+```bash
+timedatectl set-timezone 'Europe/Moscow'
+```
 
 ## HQ-CLI
 Настройка интерфейсов через `NetworkManager`:
@@ -326,6 +344,10 @@ hostnamectl set-hostname hq-cli.au-team.irpo
 exec bash
 systemctl restart NetworkManager
 ```
+Настройка часового пояса:
+```bash
+timedatectl set-timezone 'Europe/Moscow'
+```
 
 ## BR-RTR
 Настройка интерфейсов через `nmtui`:
@@ -333,10 +355,10 @@ systemctl restart NetworkManager
 nmtui
 ```
 - **hostname** - br-rtr.au-team.irpo
-- **ens18** – 172.16.2.2/28
-  + **gateway** - 172.16.2.1
-  + **DNS** - 77.88.8.8
-- **ens19** - 192.168.30.1/28
+- **ens18** – 172.16.2.2/28 (Задать согласно заданию)
+  + **gateway** - 172.16.2.1 (Задать согласно заданию)
+  + **DNS** - 77.88.8.8 (Позже изменить на ipv4 HQ-SRV)
+- **ens19** - 192.168.30.1/28 (Задать согласно заданию)
 ```bash
 exec bash
 systemctl restart NetworkManager
@@ -364,7 +386,7 @@ nano /etc/rc.d/rc.local
 ```
 ```bash
 #!/bin/bash
-ip tunnel add tun1 mode gre remote 172.16.1.2 local 172.16.2.2 ttl 255 key 12345678
+ip tunnel add tun1 mode gre remote 172.16.1.2 local 172.16.2.2 ttl 255 key 12345678 #Адреса согласно заданию
 ip link set tun1 up
 ip addr add 192.168.111.2/30 dev tun1
 ```
@@ -377,8 +399,6 @@ reboot
 ```bash
 systemctl enable --now frr
 ```
->Пример файла конфигурации можно скачать с http-сервера:  
->wget http://88.201.141.149/br-rtr/frr.conf
 ```bash
 nano /etc/frr/daemons
 ```
@@ -387,13 +407,15 @@ zebra=yes
 staticd=yes
 ospfd=yes
 ```
+>Пример файла конфигурации можно скачать с http-сервера:  
+>wget http://88.201.141.149/br-rtr/frr.conf
 ```bash
 nano /etc/frr/frr.conf
 ```
 ```bash
 router ospf
- network 192.168.30.0/28 area 0
- network 192.168.111.0/30 area 0
+ network 192.168.30.0/28 area 0      #Сеть BR-SRV, согласно заданию
+ network 192.168.111.0/30 area 0     #Сеть туннеля
  area 0 authentication
 interface tun1
  ip ospf authentication message-digest
@@ -416,6 +438,10 @@ nano /etc/sudoers
 ```bash
 net_admin ALL=(ALL) NOPASSWD:ALL
 ```
+Настройка часового пояса:
+```bash
+timedatectl set-timezone 'Europe/Moscow'
+```
 
 ## BR-SRV
 Настройка интерфейсов через `nmtui`:
@@ -423,9 +449,9 @@ net_admin ALL=(ALL) NOPASSWD:ALL
 nmtui
 ```
 - **hostname** - br-srv.au-team.irpo
-- **ens18** – 192.168.30.2/28
-  + **gateway** - 192.168.30.1
-  + **DNS** - 77.88.8.8
+- **ens18** – 192.168.30.2/28 (Задать согласно заданию)
+  + **gateway** - 192.168.30.1 (Задать согласно заданию)
+  + **DNS** - 77.88.8.8 (Позже изменить на адрес HQ-SRV)
 ```bash
 exec bash
 systemctl restart NetworkManager
@@ -463,4 +489,8 @@ nano /etc/sudoers
 ```
 ```bash
 sshuser ALL=(ALL) NOPASSWD:ALL
+```
+Настройка часового пояса:
+```bash
+timedatectl set-timezone 'Europe/Moscow'
 ```

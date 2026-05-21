@@ -87,6 +87,10 @@ iptables -A FORWARD -i ens19.200 -j ACCEPT
 iptables -A FORWARD -i ens19.999 -j ACCEPT
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
+
+#Для изменения сохраненных правил:
+#nano /etc/sysconfig/iptables
+#reboot
 ```
 
 GRE-туннель до BR-RTR:
